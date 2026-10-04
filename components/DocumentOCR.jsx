@@ -104,6 +104,9 @@ export default function DocumentOCR() {
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [explanation, setExplanation] = useState("");
+  const [explanationError, setExplanationError] = useState("");
+  const [isExplaining, setIsExplaining] = useState(false);
   const previewUrlRef = useRef("");
 
   useEffect(() => {
@@ -118,6 +121,8 @@ export default function DocumentOCR() {
     setError("");
     setProgress(null);
     setCopied(false);
+    setExplanation("");
+    setExplanationError("");
 
     if (!file) {
       setImage(null);
@@ -187,6 +192,34 @@ export default function DocumentOCR() {
     }
   }
 
+  async function explainWithGemma() {
+    if (!text || isExplaining) return;
+
+    setIsExplaining(true);
+    setExplanation("");
+    setExplanationError("");
+
+    try {
+      const response = await fetch("/api/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not explain the document.");
+      }
+
+      setExplanation(data.explanation);
+    } catch (err) {
+      console.error("Explanation failed:", err);
+      setExplanationError(err.message || "Could not explain the document.");
+    } finally {
+      setIsExplaining(false);
+    }
+  }
+
   return (
     <section className="w-full max-w-2xl space-y-4">
       <label className="block">
@@ -234,21 +267,47 @@ export default function DocumentOCR() {
       {error && <p role="alert" className="text-red-700">{error}</p>}
 
       {text && (
-        <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-zinc-900">Extracted text</h2>
-            <button
-              type="button"
-              onClick={copyText}
-              className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              {copied ? "Copied" : "Copy text"}
-            </button>
-          </div>
-          <div className="max-h-96 overflow-auto whitespace-pre-wrap px-5 py-4 text-sm leading-6 text-zinc-800 selection:bg-blue-100">
-            {text}
-          </div>
-        </section>
+        <>
+          <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
+              <h2 className="text-sm font-semibold text-zinc-900">Extracted text</h2>
+              <button
+                type="button"
+                onClick={copyText}
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                {copied ? "Copied" : "Copy text"}
+              </button>
+            </div>
+            <div className="max-h-96 overflow-auto whitespace-pre-wrap px-5 py-4 text-sm leading-6 text-zinc-800 selection:bg-blue-100">
+              {text}
+            </div>
+          </section>
+
+          <button
+            type="button"
+            onClick={explainWithGemma}
+            disabled={isExplaining}
+            className="rounded bg-blue-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isExplaining ? "Explaining…" : "Explain with Gemma"}
+          </button>
+
+          {explanationError && (
+            <p role="alert" className="text-red-700">{explanationError}</p>
+          )}
+
+          {explanation && (
+            <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+              <div className="border-b border-zinc-100 px-5 py-3">
+                <h2 className="text-sm font-semibold text-zinc-900">Explanation</h2>
+              </div>
+              <div className="whitespace-pre-wrap px-5 py-4 text-sm leading-6 text-zinc-800">
+                {explanation}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </section>
   );
