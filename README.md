@@ -9,6 +9,7 @@ Upload a document, and ExplainIt extracts the text using OCR and uses Gemma to t
 It supports English, Kannada, and Hindi, with optional voice playback.
 
 ## How It Works
+```
 
 Document
 ↓
@@ -19,6 +20,7 @@ Extracted Text
 Gemma
 ↓
 Simple Explanation
+```
 
 The OCR runs directly in the browser. The original document is not sent to the AI model; only the extracted text is sent to the server for explanation.
 
